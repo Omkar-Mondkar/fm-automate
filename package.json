@@ -1,0 +1,19 @@
+{
+  "name": "fm-automate",
+  "version": "1.0.0",
+  "description": "Lightweight Node.js browser automation tool for JSP EOD job sequences",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["automation", "playwright", "jsp", "eod"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "playwright": "^1.52.0"
+  }
+}

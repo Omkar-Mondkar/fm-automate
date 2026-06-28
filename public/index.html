@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FM-Automate | JSP Job Automation Tool</title>
+  <meta name="description" content="Lightweight Node.js browser automation tool for JSP EOD job sequences">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SIDEBAR                                                 -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#bolt-grad)" stroke="none"/>
+          <defs><linearGradient id="bolt-grad" x1="3" y1="2" x2="21" y2="22"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span class="brand-name">FM-Auto</span>
+    </div>
+
+    <div class="sidebar-nav">
+      <button class="nav-item active" onclick="switchView('dashboard', this)" id="nav-dashboard">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1" stroke="url(#dash-g)"/>
+          <rect x="14" y="3" width="7" height="7" rx="1" stroke="url(#dash-g)"/>
+          <rect x="3" y="14" width="7" height="7" rx="1" stroke="url(#dash-g)"/>
+          <rect x="14" y="14" width="7" height="7" rx="1" stroke="url(#dash-g)"/>
+          <defs><linearGradient id="dash-g" x1="3" y1="3" x2="21" y2="21"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#818cf8"/></linearGradient></defs>
+        </svg>
+        <span>Dashboard</span>
+      </button>
+
+      <button class="nav-item" onclick="switchView('config', this)" id="nav-config">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3" stroke="url(#cfg-g)"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="url(#cfg-g)"/>
+          <defs><linearGradient id="cfg-g" x1="3" y1="3" x2="21" y2="21"><stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#f97316"/></linearGradient></defs>
+        </svg>
+        <span>Configuration</span>
+      </button>
+
+      <button class="nav-item" onclick="switchView('logs', this)" id="nav-logs">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 17 10 11 4 5" stroke="url(#log-g)"/>
+          <line x1="12" y1="19" x2="20" y2="19" stroke="url(#log-g)"/>
+          <defs><linearGradient id="log-g" x1="4" y1="5" x2="20" y2="19"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient></defs>
+        </svg>
+        <span>Logs</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-status">
+        <div class="sidebar-status-dot" id="sidebar-dot"></div>
+        <span id="sidebar-state">Idle</span>
+      </div>
+      <div class="sidebar-version">v1.0.0</div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- MAIN CONTENT                                            -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+        <span class="page-subtitle" id="page-subtitle">Automation overview and controls</span>
+      </div>
+      <div class="topbar-right">
+        <div class="status-chip" id="status-chip">
+          <span class="status-chip-dot" id="status-dot"></span>
+          <span id="status-text">IDLE</span>
+        </div>
+        <div class="topbar-clock" id="topbar-clock">--:--:--</div>
+      </div>
+    </header>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- VIEW: DASHBOARD                                      -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div class="view active" id="view-dashboard">
+
+      <!-- KPI CARDS -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="kpi-data">
+            <div class="kpi-value" id="kpi-completed">0</div>
+            <div class="kpi-label">Completed</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon amber">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="kpi-data">
+            <div class="kpi-value" id="kpi-remaining">0</div>
+            <div class="kpi-label">Remaining</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="kpi-data">
+            <div class="kpi-value" id="kpi-elapsed">0:00</div>
+            <div class="kpi-label">Elapsed</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon purple">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/><path d="M21 3v5h-5"/></svg>
+          </div>
+          <div class="kpi-data">
+            <div class="kpi-value" id="kpi-cycles">0</div>
+            <div class="kpi-label">Phase 2 Cycles</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROGRESS + CONTROLS -->
+      <div class="dashboard-grid">
+
+        <!-- Progress Card -->
+        <div class="card progress-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#prog-g)" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/><defs><linearGradient id="prog-g" x1="6" y1="4" x2="18" y2="20"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs></svg>
+              Queue Progress
+            </div>
+            <span class="progress-pct" id="progress-pct">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <div class="progress-detail">
+            <span><strong id="prog-done">0</strong> / <span id="prog-total">0</span> jobs complete</span>
+            <span class="progress-current">Current: <strong id="prog-current">—</strong></span>
+          </div>
+
+          <!-- Phase 2 Bar -->
+          <div class="phase2-indicator" id="phase2-bar">
+            <div class="phase2-pulse"></div>
+            <span>PHASE 2 ACTIVE</span>
+            <span class="phase2-cycle">Cycle <strong id="phase2-cycle-num">0</strong></span>
+          </div>
+        </div>
+
+        <!-- Controls Card -->
+        <div class="card controls-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#ctrl-g)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/><defs><linearGradient id="ctrl-g" x1="5" y1="3" x2="19" y2="21"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient></defs></svg>
+              Controls
+            </div>
+          </div>
+
+          <!-- PRE-EOD GATE -->
+          <div class="pre-eod-gate" id="pre-eod-gate" onclick="togglePreEod()">
+            <div class="gate-checkbox" id="gate-checkbox">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="gate-text">
+              <span class="gate-title">PRE-EOD Check Passed</span>
+              <span class="gate-hint">Confirm the PRE-EOD check is successful</span>
+            </div>
+          </div>
+
+          <input type="checkbox" id="pre-eod-native" class="hidden-cb">
+
+          <div class="control-buttons">
+            <button class="btn btn-start" id="btn-start" onclick="handleStart()" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Start Automation
+            </button>
+            <button class="btn btn-stop" id="btn-stop" onclick="handleStop()" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+              Stop
+            </button>
+          </div>
+          <div class="control-row">
+            <button class="btn btn-phase2" id="btn-phase2" onclick="handlePhase2()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/><path d="M21 3v5h-5"/></svg>
+              Phase 2: Auto
+            </button>
+            <button class="btn btn-ghost" id="btn-clear" onclick="handleClearProgress()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+              Clear Progress
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MINI LOG (latest 8 lines) -->
+      <div class="card mini-log-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#mlog-g)" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/><defs><linearGradient id="mlog-g" x1="4" y1="5" x2="20" y2="19"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient></defs></svg>
+            Recent Activity
+          </div>
+          <button class="card-link" onclick="switchView('logs', document.getElementById('nav-logs'))">View All →</button>
+        </div>
+        <div class="mini-log" id="mini-log">
+          <div class="log-placeholder">No events yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- VIEW: CONFIGURATION                                  -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div class="view" id="view-config">
+      <div class="config-grid">
+
+        <!-- Target -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#tgt-g)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><defs><linearGradient id="tgt-g" x1="2" y1="2" x2="22" y2="22"><stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#ef4444"/></linearGradient></defs></svg>
+              Target Application
+            </div>
+          </div>
+          <div class="field">
+            <label for="cfg-url">Target URL</label>
+            <input type="text" class="input" id="cfg-url"
+                   placeholder="https://internal.company.com/eod/manage.jsp" value="">
+            <span class="hint">The .jsp page URL containing the job table</span>
+          </div>
+          <div class="field">
+            <label for="cfg-browser">Automation Browser</label>
+            <select class="input" id="cfg-browser" onchange="saveConfig()">
+              <option value="chromium">Chromium (Chrome/Edge)</option>
+              <option value="firefox">Firefox</option>
+              <option value="webkit">WebKit (Safari)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- CSS Classes -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#css-g)" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><defs><linearGradient id="css-g" x1="2" y1="6" x2="22" y2="18"><stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#ec4899"/></linearGradient></defs></svg>
+              CSS Selectors
+            </div>
+          </div>
+          <div class="field">
+            <label for="cfg-serial-class">Serial Number CSS Class</label>
+            <input type="text" class="input" id="cfg-serial-class" value="job-serial" placeholder="e.g. job-serial">
+          </div>
+          <div class="field">
+            <label for="cfg-checkbox-class">Checkbox CSS Class</label>
+            <input type="text" class="input" id="cfg-checkbox-class" value="job-trigger" placeholder="e.g. job-trigger">
+          </div>
+          <div class="field">
+            <label for="cfg-done-class">Done Signal CSS Class</label>
+            <input type="text" class="input" id="cfg-done-class" value="job-complete" placeholder="e.g. job-complete">
+            <span class="hint">Class added to checkbox when job completes</span>
+          </div>
+        </div>
+
+        <!-- Engine Settings -->
+        <div class="card config-wide">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#eng-g)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><defs><linearGradient id="eng-g" x1="6" y1="2" x2="17" y2="22"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs></svg>
+              Engine Settings
+            </div>
+          </div>
+          <div class="config-grid">
+            <div class="field">
+              <label for="cfg-headless">Browser Visibility</label>
+              <select class="input" id="cfg-headless" onchange="saveConfig()">
+                <option value="false">Visible (Watch the automation window)</option>
+                <option value="true">Hidden (Run completely in backend)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="cfg-recycle">Memory Protection (Recycling)</label>
+              <select class="input" id="cfg-recycle" onchange="saveConfig()">
+                <option value="true">Enabled (Restart browser every 5 jobs)</option>
+                <option value="false">Disabled (Keep same session open)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sequence -->
+        <div class="card config-wide">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#seq-g)" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/><defs><linearGradient id="seq-g" x1="3" y1="6" x2="21" y2="18"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#34d399"/></linearGradient></defs></svg>
+              Execution Sequence
+            </div>
+          </div>
+          <div class="field">
+            <label for="cfg-sequence">Job Serial Numbers (in execution order)</label>
+            <textarea class="input textarea" id="cfg-sequence" placeholder="EOD-001, EOD-002, ...">EOD-001, EOD-002, EOD-003, EOD-004, EOD-005, EOD-006, EOD-007, EOD-008, EOD-009, EOD-010, EOD-011, EOD-012, EOD-013, EOD-014, EOD-015, EOD-016, EOD-017, EOD-018, EOD-019, EOD-020, EOD-021, EOD-022, EOD-023, EOD-024, EOD-025, EOD-026</textarea>
+            <span class="hint">Comma-separated. Any subset in any order.</span>
+          </div>
+          <div class="field">
+            <label for="cfg-poll-intervals">Poll Intervals (ms)</label>
+            <input type="text" class="input" id="cfg-poll-intervals" value="2000, 5000, 5000" placeholder="2000, 5000, 5000">
+            <span class="hint">Exponential backoff intervals. Last value repeats indefinitely.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- VIEW: LOGS                                           -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div class="view" id="view-logs">
+      <div class="card logs-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#flog-g)" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/><defs><linearGradient id="flog-g" x1="4" y1="5" x2="20" y2="19"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient></defs></svg>
+            Live Telemetry Feed
+          </div>
+          <div class="log-controls">
+            <button class="chip-btn" onclick="toggleAutoScroll()" id="btn-autoscroll">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+              Auto-scroll
+            </button>
+            <button class="chip-btn" onclick="clearLogs()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+              Clear
+            </button>
+          </div>
+        </div>
+        <div class="log-terminal" id="log-terminal">
+          <div class="log-placeholder">Waiting for automation to start...</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- CONFIRMATION MODAL                                      -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal-box">
+      <div class="modal-icon-wrap">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#rocket-g)" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 3 0 3 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-3 0-3"/><defs><linearGradient id="rocket-g" x1="2" y1="2" x2="22" y2="22"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs></svg>
+      </div>
+      <h2 class="modal-title">Start Automation?</h2>
+      <p class="modal-body">
+        The system will click checkboxes and wait for each job to complete <strong>without manual intervention</strong>.
+      </p>
+      <div class="modal-preview" id="modal-config-preview"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn btn-start" onclick="confirmAndStart()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Confirm & Start
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-notification" id="toast-notify">Settings Saved</div>
+
+  <script src="app.js"></script>
+</body>
+</html>
