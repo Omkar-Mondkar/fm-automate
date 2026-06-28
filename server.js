@@ -7,10 +7,21 @@
 const express = require('express');
 const path    = require('path');
 const { AutomationEngine } = require('./automation');
+const mongoose = require('mongoose');
+const Job = require('./models/Job');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
 const engine = new AutomationEngine();
+
+// Connect to MongoDB
+if (process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ MongoDB connected'))
+    .catch(err => console.error('❌ MongoDB connection error:', err));
+} else {
+  console.warn('⚠️ MONGODB_URI not provided. CRUD API will fail until configured.');
+}
 
 // ─── MIDDLEWARE ──────────────────────────────────────────────
 app.use(express.json());
@@ -182,6 +193,85 @@ app.post('/api/phase2/start', (req, res) => {
 app.post('/api/phase2/stop', (req, res) => {
   engine.stopPhase2();
   res.json({ message: 'Phase 2 stop signal sent' });
+});
+
+// ─── API: CRUD JOBS ──────────────────────────────────────────
+
+const DEFAULT_JOBS = [
+  { id:'EOD-001', name:'Equity Trade Settlement',       prio:'CRITICAL' },
+  { id:'EOD-002', name:'Fixed Income Reconciliation',   prio:'HIGH'     },
+  { id:'EOD-003', name:'FX Position Rollover',          prio:'HIGH'     },
+  { id:'EOD-004', name:'Derivatives Mark-to-Market',    prio:'CRITICAL' },
+  { id:'EOD-005', name:'Cash Ledger Sweep',             prio:'MEDIUM'   },
+  { id:'EOD-006', name:'Collateral Margin Update',      prio:'HIGH'     },
+  { id:'EOD-007', name:'Portfolio NAV Calculation',     prio:'CRITICAL' },
+  { id:'EOD-008', name:'Risk Exposure Report',          prio:'HIGH'     },
+  { id:'EOD-009', name:'Dividend Processing',           prio:'MEDIUM'   },
+  { id:'EOD-010', name:'Corporate Actions Processing',  prio:'HIGH'     },
+  { id:'EOD-011', name:'Trade Confirmation Matching',   prio:'HIGH'     },
+  { id:'EOD-012', name:'Counterparty Netting',          prio:'MEDIUM'   },
+  { id:'EOD-013', name:'Repo Agreement Rollover',       prio:'HIGH'     },
+  { id:'EOD-014', name:'Futures Settlement',            prio:'HIGH'     },
+  { id:'EOD-015', name:'Options Expiry Check',          prio:'MEDIUM'   },
+  { id:'EOD-016', name:'Bond Coupon Accrual',           prio:'MEDIUM'   },
+  { id:'EOD-017', name:'FX Spot Settlement',            prio:'HIGH'     },
+  { id:'EOD-018', name:'Equity Dividend Recon',         prio:'MEDIUM'   },
+  { id:'EOD-019', name:'Credit Risk Calculation',       prio:'CRITICAL' },
+  { id:'EOD-020', name:'Liquidity Coverage Report',     prio:'HIGH'     },
+  { id:'EOD-021', name:'Regulatory Position Report',    prio:'CRITICAL' },
+  { id:'EOD-022', name:'Tax Lot Processing',            prio:'MEDIUM'   },
+  { id:'EOD-023', name:'Performance Attribution',       prio:'LOW'      },
+  { id:'EOD-024', name:'Benchmark Rebalance Check',     prio:'LOW'      },
+  { id:'EOD-025', name:'End of Day Data Archive',       prio:'HIGH'     },
+  { id:'EOD-026', name:'System Integrity Validation',   prio:'CRITICAL' }
+];
+
+function generateDurations(jobs, min = 8, max = 30, maxCount = 2) {
+  const jobIds = jobs.map(j => j.id);
+  const shuffled = [...jobIds].sort(() => Math.random() - 0.5);
+  const maxIds = shuffled.slice(0, maxCount);
+  
+  return jobs.map(job => {
+    const isMax = maxIds.includes(job.id);
+    const durationMs = isMax ? (max * 1000) : Math.round((min + 3 + Math.random()) * 1000);
+    return { ...job, status: 'pending', durationMs, isMax };
+  });
+}
+
+app.get('/api/jobs', async (req, res) => {
+  try {
+    let jobs = await Job.find().sort({ _id: 1 });
+    if (jobs.length === 0) {
+      const initializedJobs = generateDurations(DEFAULT_JOBS);
+      jobs = await Job.insertMany(initializedJobs);
+    }
+    res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/jobs/:id', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const job = await Job.findOneAndUpdate({ id: req.params.id }, { status }, { new: true });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/jobs/reset', async (req, res) => {
+  try {
+    const { min = 8, max = 30, maxCount = 2 } = req.body;
+    await Job.deleteMany({});
+    const newJobs = generateDurations(DEFAULT_JOBS, min, max, maxCount);
+    const jobs = await Job.insertMany(newJobs);
+    res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── START SERVER ───────────────────────────────────────────

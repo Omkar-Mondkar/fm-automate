@@ -931,34 +931,7 @@ select.finput {
 'use strict';
 
 /* ─── JOB DEFINITIONS ──────────────────────────────────────── */
-const JOBS = [
-  { id:'EOD-001', name:'Equity Trade Settlement',       prio:'CRITICAL' },
-  { id:'EOD-002', name:'Fixed Income Reconciliation',   prio:'HIGH'     },
-  { id:'EOD-003', name:'FX Position Rollover',          prio:'HIGH'     },
-  { id:'EOD-004', name:'Derivatives Mark-to-Market',    prio:'CRITICAL' },
-  { id:'EOD-005', name:'Cash Ledger Sweep',             prio:'MEDIUM'   },
-  { id:'EOD-006', name:'Collateral Margin Update',      prio:'HIGH'     },
-  { id:'EOD-007', name:'Portfolio NAV Calculation',     prio:'CRITICAL' },
-  { id:'EOD-008', name:'Risk Exposure Report',          prio:'HIGH'     },
-  { id:'EOD-009', name:'Dividend Processing',           prio:'MEDIUM'   },
-  { id:'EOD-010', name:'Corporate Actions Processing',  prio:'HIGH'     },
-  { id:'EOD-011', name:'Trade Confirmation Matching',   prio:'HIGH'     },
-  { id:'EOD-012', name:'Counterparty Netting',          prio:'MEDIUM'   },
-  { id:'EOD-013', name:'Repo Agreement Rollover',       prio:'HIGH'     },
-  { id:'EOD-014', name:'Futures Settlement',            prio:'HIGH'     },
-  { id:'EOD-015', name:'Options Expiry Check',          prio:'MEDIUM'   },
-  { id:'EOD-016', name:'Bond Coupon Accrual',           prio:'MEDIUM'   },
-  { id:'EOD-017', name:'FX Spot Settlement',            prio:'HIGH'     },
-  { id:'EOD-018', name:'Equity Dividend Recon',         prio:'MEDIUM'   },
-  { id:'EOD-019', name:'Credit Risk Calculation',       prio:'CRITICAL' },
-  { id:'EOD-020', name:'Liquidity Coverage Report',     prio:'HIGH'     },
-  { id:'EOD-021', name:'Regulatory Position Report',    prio:'CRITICAL' },
-  { id:'EOD-022', name:'Tax Lot Processing',            prio:'MEDIUM'   },
-  { id:'EOD-023', name:'Performance Attribution',       prio:'LOW'      },
-  { id:'EOD-024', name:'Benchmark Rebalance Check',     prio:'LOW'      },
-  { id:'EOD-025', name:'End of Day Data Archive',       prio:'HIGH'     },
-  { id:'EOD-026', name:'System Integrity Validation',   prio:'CRITICAL' },
-];
+let JOBS = [];
 
 /* ─── APP STATE ─────────────────────────────────────────────── */
 let CFG = { min: 8, max: 30, maxCount: 2 };
@@ -967,20 +940,32 @@ let maxJobIds  = [];   // ids assigned max duration
 let timers     = {};   // id → { to: timeoutId, iv: intervalId }
 let nDone = 0, nProc = 0;
 
-/* ─── DURATION ASSIGNMENT ───────────────────────────────────── */
-function assignDurations() {
-  const pool    = [...JOBS].sort(() => Math.random() - 0.5);
-  maxJobIds     = pool.slice(0, CFG.maxCount).map(j => j.id);
-
-  JOBS.forEach(j => {
-    if (maxJobIds.includes(j.id)) {
-      durations[j.id] = CFG.max * 1000;
-    } else {
-      // min + random in [3, 4)
-      const extra = 3 + Math.random();
-      durations[j.id] = Math.round((CFG.min + extra) * 1000);
-    }
-  });
+/* ─── API INTEGRATION ───────────────────────────────────────── */
+async function loadJobs() {
+  try {
+    const res = await fetch('/api/jobs');
+    JOBS = await res.json();
+    
+    durations = {};
+    maxJobIds = [];
+    nDone = 0;
+    nProc = 0;
+    
+    JOBS.forEach(j => {
+      durations[j.id] = j.durationMs;
+      if (j.isMax) maxJobIds.push(j.id);
+      if (j.status === 'processing') nProc++;
+      if (j.status === 'complete') nDone++;
+    });
+    
+    renderTable();
+    refreshStats();
+    refreshMaxJobDisplay();
+    updatePreview();
+  } catch (err) {
+    toast('Failed to load jobs from Database', 'Error', 'warn');
+    console.error(err);
+  }
 }
 
 /* ─── TABLE RENDER ──────────────────────────────────────────── */
@@ -991,22 +976,33 @@ function renderTable() {
   JOBS.forEach(job => {
     const isMax  = maxJobIds.includes(job.id);
     const durSec = (durations[job.id] / 1000).toFixed(1);
+    const isPending = job.status === 'pending';
+    const isProc = job.status === 'processing';
+    const isComplete = job.status === 'complete';
 
     const tr = document.createElement('tr');
     tr.dataset.serial = job.id;
-    tr.dataset.status = 'pending';
+    tr.dataset.status = job.status;
     if (isMax) tr.classList.add('row-max-job');
+    if (isProc) tr.classList.add('row-proc');
+    if (isComplete) tr.classList.add('row-done');
 
     tr.innerHTML = `
       <td class="job-serial">${job.id}</td>
       <td class="job-name ${isMax ? 'max-star' : ''}">${job.name}</td>
       <td><span class="prio ${job.prio}">${job.prio}</span></td>
-      <td class="job-status"><span class="badge pending">Pending</span></td>
-      <td class="dur-cell" data-assigned="${durSec}">${isMax ? '★ ' : ''}${durSec}s</td>
+      <td class="job-status">
+        ${isPending ? '<span class="badge pending">Pending</span>' : ''}
+        ${isProc ? '<span class="badge processing"><span class="spin"></span> Processing</span>' : ''}
+        ${isComplete ? '<span class="badge complete">✓ Complete</span>' : ''}
+      </td>
+      <td class="dur-cell ${isComplete ? 'done-dur' : ''}" data-assigned="${durSec}">${isMax ? '★ ' : ''}${durSec}s</td>
       <td class="job-action">
         <input type="checkbox"
-               class="job-trigger"
+               class="job-trigger ${isComplete ? 'job-complete' : ''}"
                data-id="${job.id}"
+               ${isComplete || isProc ? 'disabled' : ''}
+               ${isComplete ? 'checked' : ''}
                onchange="onTrigger(event)">
       </td>`;
 
@@ -1041,6 +1037,13 @@ function startJob(serial, row, cb) {
   const durCell= row.querySelector('.dur-cell');
   durCell.classList.add('counting');
 
+  // Save Processing state to MongoDB
+  fetch(`/api/jobs/${serial}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'processing' })
+  }).catch(e => console.error('Failed to update DB', e));
+
   let elapsed = 0;
 
   const iv = setInterval(() => {
@@ -1059,7 +1062,7 @@ function startJob(serial, row, cb) {
   refreshStats();
 }
 
-function completeJob(serial, row, cb) {
+async function completeJob(serial, row, cb) {
   cb.disabled = true;
   cb.classList.remove('job-processing');
   cb.classList.add('job-complete');           // ← Playwright polls for this
@@ -1076,6 +1079,15 @@ function completeJob(serial, row, cb) {
   dc.classList.remove('counting');
   dc.classList.add('done-dur');
   dc.textContent = dur + 's';
+
+  // Save Complete state to MongoDB
+  try {
+    await fetch(`/api/jobs/${serial}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'complete' })
+    });
+  } catch(e) { console.error('Failed to update DB', e); }
 
   nDone++;
   nProc = Math.max(0, nProc - 1);
@@ -1111,19 +1123,26 @@ function refreshMaxJobDisplay() {
 function confirmReset() { document.getElementById('modal-reset').classList.add('open'); }
 function closeModal()   { document.getElementById('modal-reset').classList.remove('open'); }
 
-function doReset() {
+async function doReset() {
   closeModal();
 
   Object.values(timers).forEach(({ to, iv }) => { clearTimeout(to); clearInterval(iv); });
   timers = {};
-  nDone = 0;
-  nProc = 0;
-
-  assignDurations();
-  renderTable();
-  refreshStats();
-  refreshMaxJobDisplay();
-  toast('Task queue reset. Durations re-randomised.', 'Queue Reset', 'info');
+  
+  toast('Resetting queue in database...', 'Resetting', 'info');
+  
+  try {
+    await fetch('/api/jobs/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(CFG)
+    });
+    
+    await loadJobs();
+    toast('Task queue reset in Database.', 'Queue Reset', 'ok');
+  } catch (err) {
+    toast('Failed to reset jobs in DB', 'Error', 'warn');
+  }
 }
 
 /* ─── SETTINGS ──────────────────────────────────────────────── */
@@ -1212,11 +1231,7 @@ function tick() {
 }
 
 /* ─── INIT ───────────────────────────────────────────────────── */
-assignDurations();
-renderTable();
-refreshStats();
-refreshMaxJobDisplay();
-updatePreview();
+loadJobs();
 tick();
 setInterval(tick, 1000);
 </script>
