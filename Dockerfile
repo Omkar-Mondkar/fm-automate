@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.46.1-jammy
+FROM mcr.microsoft.com/playwright:v1.61.1-jammy
 
 # Create app directory
 WORKDIR /usr/src/app
